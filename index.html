@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARC // PRADA_AESTHETIC</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display+SC:wght@400;700;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* --- PRADA PALETTE --- */
+            --prada-sage: #c6dcb6; 
+            --prada-olive: #9db088;
+            --prada-burgundy: #8a3324;
+            --prada-cream: #f2f0e6;
+            --bg-dark: #020302;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; cursor: crosshair; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--prada-cream);
+            font-family: 'Space Mono', monospace;
+            height: 100vh;
+            overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        /* --- ФОН --- */
+        .screen-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
+            background: #000; 
+        }
+        
+        .bg-img {
+            position: absolute; top: -5%; left: -5%; width: 110%; height: 110%;
+            object-fit: cover;
+            /* VINTAGE FILM FILTER */
+            filter: grayscale(100%) sepia(60%) hue-rotate(60deg) saturate(1.5) contrast(1.2) brightness(0.4) blur(3px);
+            opacity: 0; transition: opacity 1s ease-in-out;
+            mix-blend-mode: screen; 
+        }
+        .bg-img.active { opacity: 1; }
+
+        /* --- ЭФФЕКТЫ --- */
+        .crt-lines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50;
+            background: repeating-linear-gradient(0deg, rgba(200, 220, 180, 0.03), rgba(200, 220, 180, 0.03) 1px, transparent 1px, transparent 3px);
+            background-size: 100% 3px;
+        }
+        
+        .vignette {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 51;
+            background: radial-gradient(ellipse at center, transparent 30%, rgba(5, 10, 5, 0.6) 70%, #010201 100%);
+        }
+        
+        .screen-bloom {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 52;
+            background: radial-gradient(circle at center, rgba(198, 220, 182, 0.04), transparent 60%);
+            mix-blend-mode: screen;
+            filter: blur(10px);
+        }
+
+        .film-grain {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 49;
+            background-image: url('https://assets.codepen.io/13471/noise.png');
+            opacity: 0.09;
+            animation: grain 0.5s steps(5) infinite;
+        }
+
+        /* --- HUD LAYER --- */
+        .hud-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;
+            padding: 60px; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            mix-blend-mode: normal; 
+        }
+
+        .text-group {
+            position: relative; max-width: 800px; text-align: center;
+            display: none; opacity: 0;
+            filter: blur(0.8px); 
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .text-group:not(.active) { display: none; }
+        .text-group.active { display: flex; opacity: 1; }
+
+        /* --- ТИПОГРАФИКА --- */
+        .tech-data {
+            font-size: 0.7rem; color: var(--prada-sage); letter-spacing: 6px; 
+            margin-bottom: 25px; display: inline-block; font-weight: bold;
+            text-transform: uppercase;
+            text-shadow: 0 0 15px var(--prada-sage);
+            opacity: 0.8;
+            filter: blur(0.6px); 
+        }
+
+        h1 {
+            font-family: 'Playfair Display SC', serif; 
+            font-size: 5rem; line-height: 1.1; margin-bottom: 25px;
+            color: var(--prada-cream);
+            filter: blur(1.8px); 
+            text-shadow: 0 0 25px rgba(198, 220, 182, 0.5), 0 0 60px rgba(157, 176, 136, 0.4);
+            animation: glow-breathe 8s infinite ease-in-out alternate;
+        }
+
+        .separator {
+            width: 1px; height: 50px; 
+            background: linear-gradient(to bottom, transparent, var(--prada-olive), transparent);
+            margin-bottom: 25px; opacity: 0.6; filter: blur(1px);
+        }
+
+        p {
+            font-size: 1.2rem; line-height: 1.8; 
+            color: rgba(242, 240, 230, 0.9);
+            max-width: 650px; margin: 0 auto;
+            background: none; border: none; padding: 0;
+            text-shadow: 0 0 20px rgba(198, 220, 182, 0.4);
+            filter: blur(1px);
+        }
+
+        /* --- UI ПАНЕЛИ --- */
+        .top-ui, .bottom-ui {
+            position: absolute; left: 0; width: 100%; padding: 40px 60px; 
+            display: flex; justify-content: space-between; z-index: 20; border: none;
+        }
+
+        .top-ui { 
+            top: 0; background: linear-gradient(to bottom, rgba(2,3,2,0.95) 0%, transparent 100%);
+        }
+        .bottom-ui { 
+            bottom: 0; align-items: center; background: linear-gradient(to top, rgba(2,3,2,0.95) 0%, transparent 100%);
+        }
+
+        .btn-nav {
+            background: rgba(198, 220, 182, 0.05); border: 1px solid rgba(198, 220, 182, 0.3); 
+            color: var(--prada-sage); padding: 12px 30px; 
+            font-family: 'Space Mono'; font-weight: bold; cursor: pointer; 
+            text-transform: uppercase; transition: 0.4s; letter-spacing: 2px; font-size: 0.75rem;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5); text-shadow: 0 0 5px rgba(198, 220, 182, 0.5);
+            filter: blur(0.5px);
+        }
+        .btn-nav:hover { 
+            background: var(--prada-sage); color: #051005; border-color: var(--prada-sage);
+            box-shadow: 0 0 30px var(--prada-sage); filter: blur(0px);
+        }
+
+        /* Стиль для ссылки контактов */
+        .contact-link {
+            color: var(--prada-cream); text-decoration: none;
+            border-bottom: 1px solid rgba(157, 176, 136, 0.5);
+            transition: all 0.3s ease; display: inline-block;
+        }
+        .contact-link:hover {
+            color: #fff; text-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+            border-color: #fff; transform: translateY(-1px);
+        }
+
+        .progress-line {
+            position: absolute; bottom: 0; left: 0; height: 3px; 
+            background: var(--prada-sage); width: 0%;
+            box-shadow: 0 0 20px var(--prada-sage); z-index: 70; transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+            filter: blur(1px);
+        }
+
+        /* АНИМАЦИИ */
+        @keyframes glow-breathe {
+            0% { text-shadow: 0 0 20px rgba(198, 220, 182, 0.3), 0 0 50px rgba(198, 220, 182, 0.2); opacity: 0.85; filter: blur(2px); }
+            100% { text-shadow: 0 0 30px rgba(198, 220, 182, 0.6), 0 0 80px rgba(198, 220, 182, 0.5); opacity: 1; filter: blur(1.5px); }
+        }
+        @keyframes grain {
+            0%, 100% { transform: translate(0, 0); } 20% { transform: translate(-2%, -2%); } 40% { transform: translate(2%, 2%); } 60% { transform: translate(-2%, 2%); } 80% { transform: translate(2%, -2%); }
+        }
+        .scan-bar {
+            position: fixed; top: 0; left: 0; width: 100%; height: 2px; background: rgba(198, 220, 182, 0.1); z-index: 60;
+            animation: scan 10s linear infinite; pointer-events: none; opacity: 0.2; filter: blur(2px);
+        }
+        @keyframes scan { 0% { transform: translateY(-10vh); } 100% { transform: translateY(110vh); } }
+
+        @media (max-width: 900px) { h1 { font-size: 3rem; } .hud-layer { padding: 80px 20px; } .top-ui, .bottom-ui { padding: 20px; } }
+    </style>
+</head>
+<body>
+
+    <div class="crt-lines"></div>
+    <div class="vignette"></div>
+    <div class="screen-bloom"></div>
+    <div class="scan-bar"></div>
+    <div class="film-grain"></div>
+
+    <div class="top-ui">
+        <div style="font-family: 'Playfair Display SC'; font-weight: 900; color: var(--prada-sage); font-size: 1.2rem; letter-spacing: 3px; text-shadow: 0 0 20px rgba(198, 220, 182, 0.5); filter: blur(1px);">RCCN // ARCHIVE_02</div>
+        <div style="color: var(--prada-burgundy); font-size: 0.75rem; letter-spacing: 2px; text-shadow: 0 0 15px var(--prada-burgundy); filter: blur(0.8px);">● LIVE_FEED</div>
+    </div>
+
+    <div class="screen-layer">
+        <img src="cxz2.png?w=1200&q=80" class="bg-img active">
+        <img src="new_NIK(2).jpg?w=1200&q=80" class="bg-img">
+        <img src="gem.png?w=1200&q=80" class="bg-img">
+        <img src="light.jpg?w=1200&q=80" class="bg-img">
+        <img src="qwe_NIK.jpg?w=1200&q=80" class="bg-img">
+        <img src="vibe_NIK.jpg?w=1200&q=80" class="bg-img">
+    </div>
+
+    <div class="hud-layer">
+        <div class="text-group active">
+            <div class="tech-data">COLLECTION // 01</div>
+            <h1>ПЕЩЕРА 2.0</h1>
+            <div class="separator"></div>
+            <p>Платон описывал тени на стенах. Сегодня наши стены — экраны смартфонов.
+Виртуализация — это не технология, это новый способ существования человека.</p>
+        </div>
+        <div class="text-group">
+            <div class="tech-data">COLLECTION // 02</div>
+            <h1>ГИПЕРРЕАЛЬНОСТЬ</h1>
+            <div class="separator"></div>
+            <p>Бодрийяр предупреждал: копия становится важнее оригинала.
+Мы живем в мире симулякров, где медиа-образ определяет реальность, а не наоборот.</p>
+        </div>
+        <div class="text-group">
+            <div class="tech-data">COLLECTION // 03</div>
+            <h1>ЦИФРОВОЙ ДУАЛИЗМ</h1>
+            <div class="separator"></div>
+            <p>Кто я в сети? Редактируемый аватар против несовершенного тела.
+Виртуализация создает пропасть между биологическим и цифровым "Я".</p>
+        </div>
+        <div class="text-group">
+            <div class="tech-data">COLLECTION // 04</div>
+            <h1>КЛИПОВЫЙ РАЗУМ</h1>
+            <div class="separator"></div>
+            <p>Фрагментарность вместо глубины. Эффект Google вместо памяти.
+Наш мозг адаптируется к потоку, теряя способность к длительной концентрации.</p>
+        </div>
+        <div class="text-group">
+            <div class="tech-data">COLLECTION // 05</div>
+            <h1>ПУЗЫРИ ФИЛЬТРОВ</h1>
+            <div class="separator"></div>
+            <p>Алгоритмы создают уютные тюрьмы из наших предпочтений.
+Мы видим не мир, а зеркало своих убеждений. Истина становится излишней.</p>
+        </div>
+        <div class="text-group">
+            <div class="tech-data">COLLECTION // 06</div>
+            <h1>ПУСТЫНЯ РЕАЛЬНОГО</h1>
+            <div class="separator"></div>
+            <p>Где заканчивается код и начинается жизнь?
+Главный вопрос философии сегодня — как остаться субъектом в мире тотальной цифры.</p>
+        </div>
+    </div>
+
+    <div class="bottom-ui">
+        <div style="display: flex; gap: 40px;">
+            <button class="btn-nav" onclick="changeSlide(-1)">PREV</button>
+            <button class="btn-nav" onclick="changeSlide(1)">NEXT</button>
+        </div>
+        
+        <div style="text-align: right; z-index: 21;">
+            <div style="font-size: 0.65rem; color: var(--prada-olive); letter-spacing: 2px; margin-bottom: 5px; filter: blur(0.5px);">SIGNAL: STABLE</div>
+            <div style="font-size: 0.75rem; color: var(--prada-sage); letter-spacing: 1px; line-height: 1.4; filter: blur(0.6px); text-shadow: 0 0 10px rgba(198, 220, 182, 0.3);">
+                v.nalivaiko <br>
+                <a href="https://t.me/Raccoon4eg" target="_blank" class="contact-link">tg @Raccoon4eg</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="progress-line" id="prog"></div>
+
+    <script>
+        const texts = document.querySelectorAll('.text-group');
+        const bgs = document.querySelectorAll('.bg-img');
+        const progBar = document.getElementById('prog');
+        let current = 0;
+        let isAnimating = false;
+
+        function updateProgress() {
+            const w = ((current + 1) / texts.length) * 100;
+            progBar.style.width = w + '%';
+        }
+
+        function changeSlide(dir) {
+            if (isAnimating) return;
+            const next = current + dir;
+            if (next < 0 || next >= texts.length) return;
+
+            isAnimating = true;
+
+            gsap.to(texts[current], { 
+                opacity: 0, scale: 1.05, filter: "blur(25px)", duration: 0.8, ease: "power2.inOut"
+            });
+            gsap.to(bgs[current], { opacity: 0, duration: 1.2 });
+
+            setTimeout(() => {
+                texts[current].classList.remove('active');
+                bgs[current].classList.remove('active');
+                current = next;
+                texts[current].classList.add('active');
+                bgs[current].classList.add('active');
+
+                gsap.fromTo(bgs[current], 
+                    { opacity: 0, filter: "brightness(0) blur(15px)" }, 
+                    { opacity: 1, filter: "grayscale(100%) sepia(60%) hue-rotate(60deg) saturate(1.5) contrast(1.2) brightness(0.4) blur(3px)", duration: 2, ease: "power2.out" }
+                );
+                gsap.fromTo(texts[current], 
+                    { opacity: 0, scale: 0.95, filter: "blur(20px)" }, 
+                    { opacity: 1, scale: 1, filter: "blur(0.8px)", duration: 1.5, ease: "power2.out" }
+                );
+                
+                const sep = texts[current].querySelector('.separator');
+                gsap.fromTo(sep, { height: 0, opacity: 0 }, { height: 50, opacity: 0.6, duration: 1.2, delay: 0.3, ease: "power2.out" });
+
+                updateProgress();
+                isAnimating = false;
+            }, 800);
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * 10;
+            const y = (e.clientY / window.innerHeight - 0.5) * 10;
+            gsap.to('.bg-img.active', { x: -x, y: -y, duration: 2.5 });
+            gsap.to('.text-group.active', { x: x * 0.5, y: y * 0.5, duration: 2.5 });
+        });
+
+        let scrollTimeout;
+        window.addEventListener('wheel', (e) => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => { if (e.deltaY > 0) changeSlide(1); else changeSlide(-1); }, 100);
+        });
+
+        updateProgress();
+        gsap.fromTo(texts[0], { opacity: 0, filter: "blur(20px)" }, { opacity: 1, filter: "blur(0.8px)", duration: 2.5 });
+    </script>
+</body>
+</html>
